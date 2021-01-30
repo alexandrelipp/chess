@@ -1,3 +1,5 @@
+import 'package:chess/providers/myProvider.dart';
+import 'package:provider/provider.dart';
 import 'package:flutter/material.dart';
 import '../widgets/background.dart';
 
@@ -83,14 +85,70 @@ class _ChessScreenState extends State<ChessScreen> {
       _screenWidth = MediaQuery.of(context).size.width;
       _squareSize = (_screenWidth / 8).floorToDouble();
       _initImages();
+      context.read<MyProvider>().initPieces();
       _isInit = true;
     }
 
     super.didChangeDependencies();
   }
 
+  Widget drawPiece(int n){
+    switch (n) {
+      case 1:
+        return _whitePon;
+        break;
+      case 2:
+        return _whiteKnight;
+        break;
+      case 3:
+        return _whiteBishop;
+        break;
+      case 5:
+        return _whiteRook;
+        break;
+      case 9:
+        return _whiteQueen;
+        break;
+      case 10:
+        return _whiteKing;
+        break;
+      case -1:
+        return _blackPon;
+        break;
+      case -2:
+        return _blackKnight;
+        break;
+      case -3:
+        return _blackBishop;
+        break;
+      case -5:
+        return _blackRook;
+        break;
+      case -9:
+        return _blackQueen;
+        break;
+      case -10:
+        return _blackKing;
+        break;
+      
+      default:
+        return Text('ok');
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final _pieces = context.watch<MyProvider>().pieces;
+    final test = _pieces
+        .map(
+          (piece) => Positioned(
+            left: _squareSize*piece.x,
+            top: _squareSize*piece.y,
+            child: drawPiece(piece.type),
+          ),
+        )
+        .toList();
+    print(_pieces);
     return Scaffold(
       appBar: AppBar(
         title: Text('Chess'),
@@ -98,54 +156,56 @@ class _ChessScreenState extends State<ChessScreen> {
       body: Center(
         child: Stack(children: [
           BackGround(_screenWidth),
-          Positioned(child: _whiteRook),
-          Positioned(
-            left: _squareSize,
-            child: _whiteKnight,
-          ),
-          Positioned(
-            left: 2 * _squareSize,
-            child: _whiteBishop,
-          ),
-          Positioned(
-            left: 3 * _squareSize,
-            child: _whiteKing,
-          ),
-          Positioned(
-            left: 4 * _squareSize,
-            child: _whiteQueen,
-          ),
-          Positioned(
-            top: _squareSize,
-            child: _whitePon,
-          ),
-          Positioned(top: 7 * _squareSize, child: _blackRook),
-          Positioned(
-            top: 7 * _squareSize,
-            left: _squareSize,
-            child: _blackKnight,
-          ),
-          Positioned(
-            top: 7 * _squareSize,
-            left: 2 * _squareSize,
-            child: _blackBishop,
-          ),
-          Positioned(
-            top: 7 * _squareSize,
-            left: 3 * _squareSize,
-            child: _blackKing,
-          ),
-          Positioned(
-            top: 7 * _squareSize,
-            left: 4 * _squareSize,
-            child: _blackQueen,
-          ),
-          Positioned(
-            top: 6 * _squareSize,
-            child: _blackPon,
-          ),
+          ...test
         ]),
       ),
     );
   }
 }
+//
+// Positioned(child: _whiteRook),
+// Positioned(
+//   left: _squareSize,
+//   child: _whiteKnight,
+// ),
+// Positioned(
+//   left: 2 * _squareSize,
+//   child: _whiteBishop,
+// ),
+// Positioned(
+//   left: 3 * _squareSize,
+//   child: _whiteKing,
+// ),
+// Positioned(
+//   left: 4 * _squareSize,
+//   child: _whiteQueen,
+// ),
+// Positioned(
+//   top: _squareSize,
+//   child: _whitePon,
+// ),
+// Positioned(top: 7 * _squareSize, child: _blackRook),
+// Positioned(
+//   top: 7 * _squareSize,
+//   left: _squareSize,
+//   child: _blackKnight,
+// ),
+// Positioned(
+//   top: 7 * _squareSize,
+//   left: 2 * _squareSize,
+//   child: _blackBishop,
+// ),
+// Positioned(
+//   top: 7 * _squareSize,
+//   left: 3 * _squareSize,
+//   child: _blackKing,
+// ),
+// Positioned(
+//   top: 7 * _squareSize,
+//   left: 4 * _squareSize,
+//   child: _blackQueen,
+// ),
+// Positioned(
+//   top: 6 * _squareSize,
+//   child: _blackPon,
+// ),
