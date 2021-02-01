@@ -92,7 +92,7 @@ class _ChessScreenState extends State<ChessScreen> {
     super.didChangeDependencies();
   }
 
-  Widget drawPiece(int n){
+  Widget drawPiece(int n) {
     switch (n) {
       case 1:
         return _whitePon;
@@ -130,82 +130,61 @@ class _ChessScreenState extends State<ChessScreen> {
       case -10:
         return _blackKing;
         break;
-      
+
       default:
-        return Text('ok');
+        return Container();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final _pieces = context.watch<MyProvider>().pieces;
-    final test = _pieces
+    final options = context
+        .watch<MyProvider>()
+        .options
+        .map((pos) => Positioned(
+            left: pos.x * _squareSize,
+            top: pos.y * _squareSize,
+            child: Container(
+              width: _squareSize,
+              height: _squareSize,
+              color: Colors.green,
+            )))
+        .toList();
+    final pieces = context
+        .watch<MyProvider>()
+        .pieces
+        .asMap()
+        .entries
         .map(
-          (piece) => Positioned(
-            left: _squareSize*piece.x,
-            top: _squareSize*piece.y,
-            child: drawPiece(piece.type),
+          (entry) => Positioned(
+            key: ValueKey(entry
+                .key), //key required for captures (when pieces are deleted from this list)
+            left: _squareSize * entry.value.x,
+            top: _squareSize * entry.value.y,
+            child: drawPiece(entry.value.type),
           ),
         )
         .toList();
-    print(_pieces);
     return Scaffold(
       appBar: AppBar(
         title: Text('Chess'),
       ),
       body: Center(
-        child: Stack(children: [
-          BackGround(_screenWidth),
-          ...test
-        ]),
+        child: GestureDetector(
+          behavior: HitTestBehavior.translucent,
+          onTapDown: (details) {
+            var localPos = details.localPosition;
+            context
+                .read<MyProvider>()
+                .move(localPos.dx ~/ _squareSize, localPos.dy ~/ _squareSize);
+          },
+          child: Stack(children: [
+            BackGround(_screenWidth),
+            ...options,
+            ...pieces,
+          ]),
+        ),
       ),
     );
   }
 }
-//
-// Positioned(child: _whiteRook),
-// Positioned(
-//   left: _squareSize,
-//   child: _whiteKnight,
-// ),
-// Positioned(
-//   left: 2 * _squareSize,
-//   child: _whiteBishop,
-// ),
-// Positioned(
-//   left: 3 * _squareSize,
-//   child: _whiteKing,
-// ),
-// Positioned(
-//   left: 4 * _squareSize,
-//   child: _whiteQueen,
-// ),
-// Positioned(
-//   top: _squareSize,
-//   child: _whitePon,
-// ),
-// Positioned(top: 7 * _squareSize, child: _blackRook),
-// Positioned(
-//   top: 7 * _squareSize,
-//   left: _squareSize,
-//   child: _blackKnight,
-// ),
-// Positioned(
-//   top: 7 * _squareSize,
-//   left: 2 * _squareSize,
-//   child: _blackBishop,
-// ),
-// Positioned(
-//   top: 7 * _squareSize,
-//   left: 3 * _squareSize,
-//   child: _blackKing,
-// ),
-// Positioned(
-//   top: 7 * _squareSize,
-//   left: 4 * _squareSize,
-//   child: _blackQueen,
-// ),
-// Positioned(
-//   top: 6 * _squareSize,
-//   child: _blackPon,
-// ),
