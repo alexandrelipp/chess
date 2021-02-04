@@ -153,15 +153,14 @@ class _ChessScreenState extends State<ChessScreen> {
     final pieces = context
         .watch<MyProvider>()
         .pieces
-        .asMap()
-        .entries
+        
         .map(
-          (entry) => Positioned(
-            key: ValueKey(entry
-                .key), //key required for captures (when pieces are deleted from this list)
-            left: _squareSize * entry.value.x,
-            top: _squareSize * entry.value.y,
-            child: drawPiece(entry.value.type),
+          (piece) => Container(
+            child: Positioned(
+              left: _squareSize * piece.x,
+              top: _squareSize * piece.y,
+              child: drawPiece(piece.type),
+            ),
           ),
         )
         .toList();
@@ -176,7 +175,7 @@ class _ChessScreenState extends State<ChessScreen> {
             var localPos = details.localPosition;
             context
                 .read<MyProvider>()
-                .move(localPos.dx ~/ _squareSize, localPos.dy ~/ _squareSize);
+                .press(localPos.dx ~/ _squareSize, localPos.dy ~/ _squareSize);
           },
           child: Stack(children: [
             BackGround(_screenWidth),
