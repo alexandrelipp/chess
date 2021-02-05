@@ -1,3 +1,5 @@
+import 'dart:ffi';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
@@ -11,26 +13,26 @@ class MyProvider with ChangeNotifier {
   Pos currentPos;
   var _mode = Mode.blank;
   var _whiteTurn = true;
+  int _enPassant=100;//100 means enPassant is not available
+  final _canCastle = {
+    'blackLong': true,
+    'blackShort': true,
+    'whiteLong': true,
+    'whiteShort': true,
+  };
   var _options = <Pos>[];
   final _chessBoard = [
-    [0, 0, 0, -10, -9, -3, -2, -5],
+    [-5, -0, 0, 0, -10, 0, 0, -5],
     [-1, -1, -1, -1, -1, -1, -1, -1],
     [0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0],
-    [0, 0, 0, 2, 10, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0],
     [1, 1, 1, 1, 1, 1, 1, 1],
-    [5, 2, 3, 9, 10, 3, 2, 5]
+    [5, 0, 0, 0, 10, 0, 0, 5]
   ];
-
-  final _pieces = <Piece>[];
-
-  List<Piece> get pieces {
-    return [..._pieces];
-  }
-
-  //  final _chessBoard = [
-  //   [-5, -2, -3, -10, -9, -3, -2, -5],
+  // final _chessBoard = [
+  //   [-5, -2, -3, -9, -10, -3, -2, -5],
   //   [-1, -1, -1, -1, -1, -1, -1, -1],
   //   [0, 0, 0, 0, 0, 0, 0, 0],
   //   [0, 0, 0, 0, 0, 0, 0, 0],
@@ -39,6 +41,11 @@ class MyProvider with ChangeNotifier {
   //   [1, 1, 1, 1, 1, 1, 1, 1],
   //   [5, 2, 3, 9, 10, 3, 2, 5]
   // ];
+  final _pieces = <Piece>[];
+
+  List<Piece> get pieces {
+    return [..._pieces];
+  }
 
   void initPieces() {
     for (var i = 0; i < 8; i++) {
@@ -71,10 +78,79 @@ class MyProvider with ChangeNotifier {
       case -2:
         _knightOptions(x, y);
         break;
+      case 5:
+      case -5:
+        _rookOptions(x, y);
+        break;
+      case 3:
+      case -3:
+        _bishopOptions(x, y);
+        break;
+      case 9:
+      case -9:
+        _rookOptions(x, y);
+        _bishopOptions(x, y);
+        break;
       default:
     }
     notifyListeners();
     _mode = Mode.options;
+  }
+
+  void _moveRookIfCastle(int x, int y) {
+    if (_whiteTurn && _canCastle['whiteLong'] && x == 2 && y == 7) {
+      _chessBoard[7][0] = 0;
+      _chessBoard[7][3] = 5;
+      _pieces.firstWhere((element) => element.x == 0 && element.y == 7).x = 3;
+      return;
+    }
+    if (_whiteTurn && _canCastle['whiteShort'] && x == 6 && y == 7) {
+      _chessBoard[7][7] = 0;
+      _chessBoard[7][5] = 5;
+      _pieces.firstWhere((element) => element.x == 7 && element.y == 7).x = 5;
+      return;
+    }
+    if (!_whiteTurn && _canCastle['blackLong'] && x == 2 && y == 0) {
+      _chessBoard[0][0] = 0;
+      _chessBoard[0][3] = -5;
+      _pieces.firstWhere((element) => element.x == 0 && element.y == 0).x = 3;
+      return;
+    }
+    if (!_whiteTurn && _canCastle['blackShort'] && x == 6 && y == 0) {
+      _chessBoard[0][7] = 0;
+      _chessBoard[0][5] = -5;
+      _pieces.firstWhere((element) => element.x == 7 && element.y == 0).x = 5;
+      return;
+    }
+  }
+
+  void _removeCastleRightKing() {
+    if (_whiteTurn) {
+      _canCastle['whiteLong'] = false;
+      _canCastle['whiteShort'] = false;
+      return;
+    }
+    _canCastle['blackLong'] = false;
+    _canCastle['blackShort'] = false;
+  }
+
+  void _removeCastleRightRook() {
+    if (_whiteTurn && currentPos.x == 0 && currentPos.y == 7) {
+      _canCastle['whiteLong'] = false;
+      return;
+    }
+    if (_whiteTurn && currentPos.x == 7 && currentPos.y == 7) {
+      _canCastle['whiteShort'] = false;
+      return;
+    }
+    if (!_whiteTurn && currentPos.x == 0 && currentPos.y == 0) {
+      _canCastle['blackLong'] = false;
+      return;
+    }
+    if (!_whiteTurn && currentPos.x == 7 && currentPos.y == 0) {
+      _canCastle['blackShort'] = false;
+      return;
+    }
   }
 
   void _moveIfValidOption(int newX, int newY) {
@@ -88,10 +164,40 @@ class MyProvider with ChangeNotifier {
               .removeWhere((element) => element.x == newX && element.y == newY);
         }
         print(_pieces.length);
-        var pieceIndex = _pieces.indexWhere((element) =>
+
+        final piece = _pieces.firstWhere((element) =>
             element.x == currentPos.x && element.y == currentPos.y);
-        _pieces[pieceIndex].change(newX, newY);
-        _chessBoard[newY][newX] = _pieces[pieceIndex].type;
+        piece.change(newX, newY);
+        //if a king is the piece moving, may need to castle(move the rook as well)
+        if (piece.type.abs() == 10) {
+          _moveRookIfCastle(newX, newY);
+          _removeCastleRightKing();
+        }
+        //if a rook is the piece moving, may need to remove castle right
+        if (piece.type.abs() == 5) {
+          _removeCastleRightRook();
+        }
+        
+
+        //pon promotion
+        if ([1, -1].contains(piece.type)) {
+          print(_enPassant);
+          if ([0, 7].contains(newY)) {
+            piece.type *= 9;
+          }
+          else if(_enPassant!=100 && newY==5){
+            _chessBoard[4][_enPassant]=0;
+            _pieces.removeWhere((element) => element.x==_enPassant && element.y==4);
+          }
+          else if (currentPos.y==6 && newY==4){
+            _enPassant=newX;
+            print(_enPassant);
+          }
+        }
+        // if (_enPassant!=100 && _whiteTurn){
+        //   _enPassant=100;
+        // }
+        _chessBoard[newY][newX] = piece.type;
         print(_chessBoard);
         _whiteTurn = !_whiteTurn;
         return;
@@ -117,12 +223,17 @@ class MyProvider with ChangeNotifier {
     }
   }
 
-  void _addIfLegalOption(int optionX, int optionY) {
-    if (_whiteTurn && _chessBoard[optionY][optionX] <= 0) {
+  bool _addIfLegalOption(int optionX, int optionY) {
+    //return true if the square is empty, else returns false (regardless if the option was added or not)
+    var squareType = _chessBoard[optionY][optionX];
+    if (squareType == 0) {
       _options.add(Pos(optionX, optionY));
-    } else if (!_whiteTurn && _chessBoard[optionY][optionX] >= 0) {
+      return true;
+    }
+    if ((_whiteTurn && squareType < 0) || (!_whiteTurn && squareType >= 0)) {
       _options.add(Pos(optionX, optionY));
     }
+    return false;
   }
 
   void _whitePonOptions(int x, int y) {
@@ -156,10 +267,72 @@ class MyProvider with ChangeNotifier {
     if (x < 7 && _chessBoard[y + 1][x + 1] > 0) {
       _options.add(Pos(x + 1, y + 1));
     }
+    //enpssant option
+    if (y==4 && (_enPassant==x-1||_enPassant==x+1)){
+      _options.add(Pos(_enPassant,5));
+    }
   }
 
-  void _rookOptions(int x,int y){
-    
+  void _bishopOptions(int x, int y) {
+    //upleft
+    var j = y;
+    for (var i = x; i > 0 && j > 0; i--) {
+      if (!_addIfLegalOption(i - 1, j - 1)) {
+        break;
+      }
+      j--;
+    }
+    //upright
+    j = y;
+    for (var i = x; i < 7 && j > 0; i++) {
+      if (!_addIfLegalOption(i + 1, j - 1)) {
+        break;
+      }
+      j--;
+    }
+    //downright
+    j = y;
+    for (var i = x; i < 7 && j < 7; i++) {
+      if (!_addIfLegalOption(i + 1, j + 1)) {
+        break;
+      }
+      j++;
+    }
+    //downleft
+    j = y;
+    for (var i = x; i > 0 && j < 7; i--) {
+      if (!_addIfLegalOption(i - 1, j + 1)) {
+        break;
+      }
+      j++;
+    }
+  }
+
+  void _rookOptions(int x, int y) {
+    //right
+    for (var i = x; i < 7; i++) {
+      if (!_addIfLegalOption(i + 1, y)) {
+        break;
+      }
+    }
+    //left
+    for (var i = x; i > 0; i--) {
+      if (!_addIfLegalOption(i - 1, y)) {
+        break;
+      }
+    }
+    //down
+    for (var i = y; i < 7; i++) {
+      if (!_addIfLegalOption(x, i + 1)) {
+        break;
+      }
+    }
+    //up
+    for (var i = y; i > 0; i--) {
+      if (!_addIfLegalOption(x, i - 1)) {
+        break;
+      }
+    }
   }
 
   void _knightOptions(int x, int y) {
@@ -167,23 +340,23 @@ class MyProvider with ChangeNotifier {
       if (y < 7) {
         _addIfLegalOption(x + 2, y + 1);
       }
-      if (y>0){
+      if (y > 0) {
         _addIfLegalOption(x + 2, y - 1);
       }
     }
-     if (x > 1) {
+    if (x > 1) {
       if (y < 7) {
         _addIfLegalOption(x - 2, y + 1);
       }
-      if (y>0){
+      if (y > 0) {
         _addIfLegalOption(x - 2, y - 1);
       }
     }
-     if (y > 1) {
+    if (y > 1) {
       if (x < 7) {
         _addIfLegalOption(x + 1, y - 2);
       }
-      if (x>0){
+      if (x > 0) {
         _addIfLegalOption(x - 1, y - 2);
       }
     }
@@ -191,11 +364,10 @@ class MyProvider with ChangeNotifier {
       if (x < 7) {
         _addIfLegalOption(x + 1, y + 2);
       }
-      if (x>0){
+      if (x > 0) {
         _addIfLegalOption(x - 1, y + 2);
       }
     }
-    
   }
 
   void _kingOptions(int x, int y) {
@@ -210,6 +382,38 @@ class MyProvider with ChangeNotifier {
           _addIfLegalOption(x + i, y + j);
         }
       }
+    }
+    _addCastleOptions(x, y);
+  }
+
+  void _addCastleOptions(int x, int y) {
+    if (_canCastle['whiteLong'] &&
+        _whiteTurn &&
+        _chessBoard[7][1] == 0 &&
+        _chessBoard[7][2] == 0 &&
+        _chessBoard[7][3] == 0) {
+      _options.add(Pos(2, 7));
+    }
+    if (_canCastle['whiteShort'] &&
+        _whiteTurn &&
+        _chessBoard[7][5] == 0 &&
+        _chessBoard[7][6] == 0) {
+      _options.add(Pos(6, 7));
+      return;
+    }
+    if (_canCastle['blackLong'] &&
+        !_whiteTurn &&
+        _chessBoard[0][1] == 0 &&
+        _chessBoard[0][2] == 0 &&
+        _chessBoard[0][3] == 0) {
+      _options.add(Pos(2, 0));
+    }
+    if (_canCastle['blackShort'] &&
+        !_whiteTurn &&
+        _chessBoard[0][5] == 0 &&
+        _chessBoard[0][6] == 0) {
+      _options.add(Pos(6, 0));
+      return;
     }
   }
 }
@@ -233,22 +437,3 @@ class Pos {
 
   Pos(this.x, this.y);
 }
-
-//  for (final option in _options) {
-//         if (option.x == x && option.y == y) {
-//           _chessBoard[currentPos.y][currentPos.x] = 0;
-
-//           if (_chessBoard[y][x] != 0) {
-//             _pieces.removeWhere((element) => element.x == x && element.y == y);
-//           }
-//           print(_pieces.length);
-//            var pieceIndex = _pieces.indexWhere((element) =>
-//               element.x == currentPos.x && element.y == currentPos.y);
-//           _pieces[pieceIndex].change(x, y);
-//           _chessBoard[y][x] = _pieces[pieceIndex].type;
-//           print(_chessBoard);
-//           //notifyListeners();
-//           _whiteTurn = !_whiteTurn;
-//           break;
-//         }
-//       }
