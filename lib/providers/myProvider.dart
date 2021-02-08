@@ -13,7 +13,7 @@ class MyProvider with ChangeNotifier {
   Pos currentPos;
   var _mode = Mode.blank;
   var _whiteTurn = true;
-  int _enPassant=100;//100 means enPassant is not available
+  int _enPassant = 100; //100 means enPassant is not available
   final _canCastle = {
     'blackLong': true,
     'blackShort': true,
@@ -160,13 +160,9 @@ class MyProvider with ChangeNotifier {
 
         if (_chessBoard[newY][newX] != 0) {
           //if not 0, means it is a piece capture
-          _pieces
-              .removeWhere((element) => element.x == newX && element.y == newY);
+          _pieces.removeWhere((element) => element.x == newX && element.y == newY);
         }
-        print(_pieces.length);
-
-        final piece = _pieces.firstWhere((element) =>
-            element.x == currentPos.x && element.y == currentPos.y);
+        final piece = _pieces.firstWhere((element) => element.x == currentPos.x && element.y == currentPos.y);
         piece.change(newX, newY);
         //if a king is the piece moving, may need to castle(move the rook as well)
         if (piece.type.abs() == 10) {
@@ -177,28 +173,37 @@ class MyProvider with ChangeNotifier {
         if (piece.type.abs() == 5) {
           _removeCastleRightRook();
         }
-        
-
-        //pon promotion
+        //pon promotion and en passant
         if ([1, -1].contains(piece.type)) {
-          print(_enPassant);
           if ([0, 7].contains(newY)) {
             piece.type *= 9;
+          } else if (_enPassant != 100 && newY == 5 && !_whiteTurn) {
+            _chessBoard[4][_enPassant] = 0;
+            _pieces.removeWhere((element) => element.x == _enPassant && element.y == 4);
+          } else if (_enPassant != 100 && newY == 2 && _whiteTurn) {
+            _chessBoard[3][_enPassant] = 0;
+            _pieces.removeWhere((element) => element.x == _enPassant && element.y == 3);
+          } else if (currentPos.y == 6 && newY == 4) {
+            _enPassant = newX;
+          } else if (currentPos.y == 1 && newY == 3) {
+            _enPassant = newX;
           }
-          else if(_enPassant!=100 && newY==5){
-            _chessBoard[4][_enPassant]=0;
-            _pieces.removeWhere((element) => element.x==_enPassant && element.y==4);
-          }
-          else if (currentPos.y==6 && newY==4){
-            _enPassant=newX;
-            print(_enPassant);
+          else {
+            _enPassant=100;
           }
         }
-        // if (_enPassant!=100 && _whiteTurn){
+        else {
+          _enPassant=100;
+        }
+        // else {
         //   _enPassant=100;
         // }
+
+        print('enpassant:$_enPassant');
+        // if (_enPassant != 100) {
+        //   _enPassant = 100;
+        // }
         _chessBoard[newY][newX] = piece.type;
-        print(_chessBoard);
         _whiteTurn = !_whiteTurn;
         return;
       }
@@ -208,8 +213,7 @@ class MyProvider with ChangeNotifier {
   void press(int x, int y) {
     if (_mode == Mode.blank) {
       var pieceNumber = _chessBoard[y][x];
-      if ((_whiteTurn && pieceNumber <= 0) ||
-          (!_whiteTurn && pieceNumber >= 0)) {
+      if ((_whiteTurn && pieceNumber <= 0) || (!_whiteTurn && pieceNumber >= 0)) {
         return;
       }
       _showOptions(x, y, pieceNumber);
@@ -250,6 +254,10 @@ class MyProvider with ChangeNotifier {
     if (x < 7 && _chessBoard[y - 1][x + 1] < 0) {
       _options.add(Pos(x + 1, y - 1));
     }
+    //enpassant option
+    if (y == 3 && (_enPassant == x - 1 || _enPassant == x + 1)) {
+      _options.add(Pos(_enPassant, 2));
+    }
   }
 
   void _blackPonOptions(int x, int y) {
@@ -267,9 +275,9 @@ class MyProvider with ChangeNotifier {
     if (x < 7 && _chessBoard[y + 1][x + 1] > 0) {
       _options.add(Pos(x + 1, y + 1));
     }
-    //enpssant option
-    if (y==4 && (_enPassant==x-1||_enPassant==x+1)){
-      _options.add(Pos(_enPassant,5));
+    //enpassant option
+    if (y == 4 && (_enPassant == x - 1 || _enPassant == x + 1)) {
+      _options.add(Pos(_enPassant, 5));
     }
   }
 
@@ -394,10 +402,7 @@ class MyProvider with ChangeNotifier {
         _chessBoard[7][3] == 0) {
       _options.add(Pos(2, 7));
     }
-    if (_canCastle['whiteShort'] &&
-        _whiteTurn &&
-        _chessBoard[7][5] == 0 &&
-        _chessBoard[7][6] == 0) {
+    if (_canCastle['whiteShort'] && _whiteTurn && _chessBoard[7][5] == 0 && _chessBoard[7][6] == 0) {
       _options.add(Pos(6, 7));
       return;
     }
@@ -408,10 +413,7 @@ class MyProvider with ChangeNotifier {
         _chessBoard[0][3] == 0) {
       _options.add(Pos(2, 0));
     }
-    if (_canCastle['blackShort'] &&
-        !_whiteTurn &&
-        _chessBoard[0][5] == 0 &&
-        _chessBoard[0][6] == 0) {
+    if (_canCastle['blackShort'] && !_whiteTurn && _chessBoard[0][5] == 0 && _chessBoard[0][6] == 0) {
       _options.add(Pos(6, 0));
       return;
     }

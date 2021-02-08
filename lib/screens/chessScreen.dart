@@ -144,16 +144,18 @@ class _ChessScreenState extends State<ChessScreen> {
         .map((pos) => Positioned(
             left: pos.x * _squareSize,
             top: pos.y * _squareSize,
-            child: Container(
-              width: _squareSize,
-              height: _squareSize,
-              color: Colors.green,
+            child: Opacity(
+              opacity: 0.7,
+              child: Container(
+                width: _squareSize,
+                height: _squareSize,
+                color: Colors.green,
+              ),
             )))
         .toList();
     final pieces = context
         .watch<MyProvider>()
         .pieces
-        
         .map(
           (piece) => Container(
             child: Positioned(
