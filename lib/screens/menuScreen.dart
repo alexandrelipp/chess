@@ -62,7 +62,7 @@ class _MenuScreenState extends State<MenuScreen> {
             onPressed: () {
               Navigator.of(context).pushNamed(ChessScreen.routeName);
             },
-            child: Text('New Game'),
+            
           )
         ],
       ),
